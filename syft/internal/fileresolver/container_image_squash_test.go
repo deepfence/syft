@@ -72,7 +72,7 @@ func TestImageSquashResolver_FilesByPath(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			img := imagetest.GetFixtureImage(t, "docker-archive", "image-symlinks")
 
-			resolver, err := NewFromContainerImageSquash(img)
+			resolver, err := NewFromContainerImageSquash(img, nil)
 			if err != nil {
 				t.Fatalf("could not create resolver: %+v", err)
 			}
@@ -185,7 +185,7 @@ func TestImageSquashResolver_FilesByGlob(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			img := imagetest.GetFixtureImage(t, "docker-archive", "image-symlinks")
 
-			resolver, err := NewFromContainerImageSquash(img)
+			resolver, err := NewFromContainerImageSquash(img, nil)
 			if err != nil {
 				t.Fatalf("could not create resolver: %+v", err)
 			}
@@ -246,7 +246,7 @@ func Test_imageSquashResolver_FilesByMIMEType(t *testing.T) {
 		t.Run(test.fixtureName, func(t *testing.T) {
 			img := imagetest.GetFixtureImage(t, "docker-archive", test.fixtureName)
 
-			resolver, err := NewFromContainerImageSquash(img)
+			resolver, err := NewFromContainerImageSquash(img, nil)
 			assert.NoError(t, err)
 
 			locations, err := resolver.FilesByMIMEType(test.mimeType)
@@ -263,7 +263,7 @@ func Test_imageSquashResolver_FilesByMIMEType(t *testing.T) {
 func Test_imageSquashResolver_hasFilesystemIDInLocation(t *testing.T) {
 	img := imagetest.GetFixtureImage(t, "docker-archive", "image-duplicate-path")
 
-	resolver, err := NewFromContainerImageSquash(img)
+	resolver, err := NewFromContainerImageSquash(img, nil)
 	assert.NoError(t, err)
 
 	locations, err := resolver.FilesByMIMEType("text/plain")
@@ -321,7 +321,7 @@ func TestSquashImageResolver_FilesContents(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			img := imagetest.GetFixtureImage(t, "docker-archive", "image-symlinks")
 
-			resolver, err := NewFromContainerImageSquash(img)
+			resolver, err := NewFromContainerImageSquash(img, nil)
 			assert.NoError(t, err)
 
 			refs, err := resolver.FilesByPath(test.path)
@@ -346,7 +346,7 @@ func TestSquashImageResolver_FilesContents_errorOnDirRequest(t *testing.T) {
 
 	img := imagetest.GetFixtureImage(t, "docker-archive", "image-symlinks")
 
-	resolver, err := NewFromContainerImageSquash(img)
+	resolver, err := NewFromContainerImageSquash(img, nil)
 	assert.NoError(t, err)
 
 	var dirLoc *file.Location
@@ -502,7 +502,7 @@ func Test_imageSquashResolver_resolvesLinks(t *testing.T) {
 
 			img := imagetest.GetFixtureImage(t, "docker-archive", "image-symlinks")
 
-			resolver, err := NewFromContainerImageSquash(img)
+			resolver, err := NewFromContainerImageSquash(img, nil)
 			assert.NoError(t, err)
 
 			actual := test.runner(resolver)
@@ -516,7 +516,7 @@ func Test_imageSquashResolver_resolvesLinks(t *testing.T) {
 func TestSquashResolver_AllLocations(t *testing.T) {
 	img := imagetest.GetFixtureImage(t, "docker-archive", "image-files-deleted")
 
-	resolver, err := NewFromContainerImageSquash(img)
+	resolver, err := NewFromContainerImageSquash(img, nil)
 	assert.NoError(t, err)
 
 	paths := strset.New()

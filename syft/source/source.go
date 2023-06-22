@@ -26,6 +26,68 @@ import (
 	"github.com/anchore/syft/syft/internal/fileresolver"
 )
 
+var (
+	osIdPaths = []string{
+		"**/etc/os-release", "**/usr/lib/os-release", "**/etc/lsb-release",
+		"**/etc/centos-release", "**/etc/redhat-release", "**/etc/system-release-cpe",
+		"**/bin/busybox",
+	}
+	binarySearchPaths = []string{
+		"/usr/lib/jvm/**", "/usr/share/java/**",
+		"/usr/local/sbin/*", "/usr/local/bin/*", "/usr/sbin/*", "/usr/bin/*", "/sbin/*", "/bin/*",
+		"/usr/lib64/*", "/usr/lib/*", "/usr/share/*", "/usr/local/lib64/*", "/usr/local/lib/*",
+	}
+	catalogerGlobPatterns = map[string][]string{
+		"alpmdb-cataloger":        {"**/var/lib/pacman/local/**/desc"},
+		"apkdb-cataloger":         {"**/lib/apk/db/installed"},
+		"conan-cataloger":         {"**/conanfile.txt", "**/conan.lock"},
+		"dartlang-lock-cataloger": {"**/pubspec.lock"},
+		"dpkgdb-cataloger":        {"**/var/lib/dpkg/{status,status.d/**}"},
+		"dotnet-deps-cataloger":   {"**/*.deps.json"},
+		"go-mod-file-cataloger":   {"**/go.mod"},
+		"haskell-cataloger":       {"**/stack.yaml", "**/stack.yaml.lock", "**/cabal.project.freeze"},
+		"java-cataloger": {
+			// java archive
+			"**/*.jar", "**/*.war", "**/*.ear", "**/*.par",
+			"**/*.sar", "**/*.jpi", "**/*.hpi", "**/*.lpkg",
+			// zip java archive
+			"**/*.zip",
+			// tar java archive
+			"**/*.tar", "**/*.tar.gz", "**/*.tgz", "**/*.tar.bz", "**/*.tar.bz2",
+			"**/*.tbz", "**/*.tbz2", "**/*.tar.br", "**/*.tbr", "**/*.tar.lz4", "**/*.tlz4",
+			"**/*.tar.sz", "**/*.tsz", "**/*.tar.xz", "**/*.txz", "**/*.tar.zst",
+		},
+		"java-pom-cataloger":               {"**/pom.xml"},
+		"javascript-package-cataloger":     {"**/package.json"},
+		"javascript-lock-cataloger":        {"**/package-lock.json", "**/yarn.lock", "**/pnpm-lock.yaml"},
+		"php-composer-installed-cataloger": {"**/installed.json"},
+		"php-composer-lock-cataloger":      {"**/composer.lock"},
+		"portage-cataloger":                {"**/var/db/pkg/*/*/CONTENTS"},
+		"rpm-db-cataloger":                 {"**/var/lib/rpm/{Packages,Packages.db,rpmdb.sqlite}", "**/var/lib/rpmmanifest/container-manifest-2"},
+		"rpm-file-cataloger":               {"**/*.rpm"},
+		"ruby-gemfile-cataloger":           {"**/Gemfile.lock"},
+		"ruby-gemspec-cataloger":           {"**/specifications/**/*.gemspec"},
+		"rust-cargo-lock-cataloger":        {"**/Cargo.lock"},
+		"cocoapods-cataloger":              {"**/Podfile.lock"},
+
+		"sbom-cataloger": {
+			"**/*.syft.json", "**/*.bom.*", "**/*.bom",
+			"**/bom", "**/*.sbom.*", "**/*.sbom", "**/sbom",
+			"**/*.cdx.*", "**/*.cdx", "**/*.spdx.*", "**/*.spdx",
+		},
+
+		"python-index-cataloger": {"**/*requirements*.txt", "**/poetry.lock", "**/Pipfile.lock", "**/setup.py"},
+		"python-package-cataloger": {"**/*egg-info/PKG-INFO", "**/*.egg-info", "**/*dist-info/METADATA",
+			"**/*.egg", "**/*.whl", // python egg and whl files
+		},
+
+		// TODO: binary cataloger needs different handling
+		"binary-cataloger":                 binarySearchPaths,
+		"go-module-binary-cataloger":       binarySearchPaths,
+		"cargo-auditable-binary-cataloger": binarySearchPaths,
+	}
+)
+
 // Source is an object that captures the data source to be cataloged, configuration, and a specific resolver used
 // in cataloging (based on the data source and configuration)
 type Source struct {
@@ -37,6 +99,7 @@ type Source struct {
 	base              string
 	mutex             *sync.Mutex
 	Exclusions        []string `hash:"ignore"`
+	GlobFilter        image.PathFilter
 }
 
 // Input is an object that captures the detected user input regarding source location, scheme, and provider type.
@@ -123,8 +186,8 @@ func parseDefaultImageSource(defaultImageSource string) image.Source {
 
 type sourceDetector func(string) (image.Source, string, error)
 
-func NewFromRegistry(in Input, registryOptions *image.RegistryOptions, exclusions []string) (*Source, func(), error) {
-	source, cleanupFn, err := generateImageSource(in, registryOptions)
+func NewFromRegistry(in Input, registryOptions *image.RegistryOptions, filter image.PathFilter, exclusions []string) (*Source, func(), error) {
+	source, cleanupFn, err := generateImageSource(in, registryOptions, filter)
 	if source != nil {
 		source.Exclusions = exclusions
 	}
@@ -132,11 +195,35 @@ func NewFromRegistry(in Input, registryOptions *image.RegistryOptions, exclusion
 }
 
 // New produces a Source based on userInput like dir: or image:tag
-func New(in Input, registryOptions *image.RegistryOptions, exclusions []string) (*Source, func(), error) {
+func New(in Input, registryOptions *image.RegistryOptions, exclusions []string, inclusions []string, catalogers []string) (*Source, func(), error) {
 	var err error
 	fs := afero.NewOsFs()
 	var source *Source
 	cleanupFn := func() {}
+
+	patterns := []string{}
+	patterns = append(patterns, osIdPaths...)
+	if len(inclusions) > 0 {
+		patterns = append(patterns, inclusions...)
+	}
+	if len(catalogers) > 0 {
+		for _, c := range catalogers {
+			for k := range catalogerGlobPatterns {
+				if strings.Contains(k, c) {
+					patterns = append(patterns, catalogerGlobPatterns[k]...)
+				}
+			}
+		}
+	} else {
+		for _, c := range catalogerGlobPatterns {
+			patterns = append(patterns, c...)
+		}
+	}
+	log.Debugf("number of glob patterns %d", len(patterns))
+
+	filter := func(path string) bool {
+		return AnyGlobMatches(&patterns, path)
+	}
 
 	switch in.Scheme {
 	case FileScheme:
@@ -144,20 +231,21 @@ func New(in Input, registryOptions *image.RegistryOptions, exclusions []string) 
 	case DirectoryScheme:
 		source, cleanupFn, err = generateDirectorySource(fs, in)
 	case ImageScheme:
-		source, cleanupFn, err = generateImageSource(in, registryOptions)
+		source, cleanupFn, err = generateImageSource(in, registryOptions, filter)
 	default:
 		err = fmt.Errorf("unable to process input for scanning: %q", in.UserInput)
 	}
 
 	if err == nil {
 		source.Exclusions = exclusions
+		source.GlobFilter = filter
 	}
 
 	return source, cleanupFn, err
 }
 
-func generateImageSource(in Input, registryOptions *image.RegistryOptions) (*Source, func(), error) {
-	img, cleanup, err := getImageWithRetryStrategy(in, registryOptions)
+func generateImageSource(in Input, registryOptions *image.RegistryOptions, filter image.PathFilter) (*Source, func(), error) {
+	img, cleanup, err := getImageWithRetryStrategy(in, registryOptions, filter)
 	if err != nil || img == nil {
 		return nil, cleanup, fmt.Errorf("could not fetch image %q: %w", in.Location, err)
 	}
@@ -179,7 +267,7 @@ func parseScheme(userInput string) string {
 	return parts[0]
 }
 
-func getImageWithRetryStrategy(in Input, registryOptions *image.RegistryOptions) (*image.Image, func(), error) {
+func getImageWithRetryStrategy(in Input, registryOptions *image.RegistryOptions, filter image.PathFilter) (*image.Image, func(), error) {
 	ctx := context.TODO()
 
 	var opts []stereoscope.Option
@@ -191,7 +279,7 @@ func getImageWithRetryStrategy(in Input, registryOptions *image.RegistryOptions)
 		opts = append(opts, stereoscope.WithPlatform(in.Platform))
 	}
 
-	img, err := stereoscope.GetImageFromSource(ctx, in.Location, in.ImageSource, opts...)
+	img, err := stereoscope.GetImageFromSource(ctx, in.Location, in.ImageSource, filter, opts...)
 	cleanup := func() {
 		if err := img.Cleanup(); err != nil {
 			log.Warnf("unable to cleanup image=%q: %w", in.UserInput, err)
@@ -226,7 +314,7 @@ func getImageWithRetryStrategy(in Input, registryOptions *image.RegistryOptions)
 	// We need to determine the image source again, such that this determination
 	// doesn't take scheme parsing into account.
 	in.ImageSource = image.DetermineDefaultImagePullSource(in.UserInput)
-	img, userInputErr := stereoscope.GetImageFromSource(ctx, in.UserInput, in.ImageSource, opts...)
+	img, userInputErr := stereoscope.GetImageFromSource(ctx, in.UserInput, in.ImageSource, filter, opts...)
 	cleanup = func() {
 		if err := img.Cleanup(); err != nil {
 			log.Warnf("unable to cleanup image=%q: %w", in.UserInput, err)
@@ -511,7 +599,7 @@ func (s *Source) FileResolver(scope Scope) (file.Resolver, error) {
 			if err != nil {
 				return nil, err
 			}
-			res, err := fileresolver.NewFromDirectory(s.path, s.base, exclusionFunctions...)
+			res, err := fileresolver.NewFromDirectory(s.path, s.base, s.GlobFilter, exclusionFunctions...)
 			if err != nil {
 				return nil, fmt.Errorf("unable to create directory resolver: %w", err)
 			}
@@ -523,9 +611,9 @@ func (s *Source) FileResolver(scope Scope) (file.Resolver, error) {
 		var err error
 		switch scope {
 		case SquashedScope:
-			res, err = fileresolver.NewFromContainerImageSquash(s.Image)
+			res, err = fileresolver.NewFromContainerImageSquash(s.Image, s.GlobFilter)
 		case AllLayersScope:
-			res, err = fileresolver.NewFromContainerImageAllLayers(s.Image)
+			res, err = fileresolver.NewFromContainerImageAllLayers(s.Image, s.GlobFilter)
 		default:
 			return nil, fmt.Errorf("bad image scope provided: %+v", scope)
 		}
@@ -630,4 +718,16 @@ func getDirectoryExclusionFunctions(root string, exclusions []string) ([]fileres
 			return nil
 		},
 	}, nil
+}
+
+func AnyGlobMatches(patterns *[]string, path string) bool {
+	for _, p := range *patterns {
+		match, err := doublestar.PathMatch(p, path)
+		if err != nil {
+			continue
+		} else if match {
+			return true
+		}
+	}
+	return false
 }

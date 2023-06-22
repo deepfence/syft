@@ -598,7 +598,7 @@ func TestDirectoryExclusions(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			sourceInput, err := ParseInput("dir:"+test.input, "")
 			require.NoError(t, err)
-			src, fn, err := New(*sourceInput, registryOpts, test.exclusions)
+			src, fn, err := New(*sourceInput, registryOpts, test.exclusions, nil, nil)
 			defer fn()
 
 			if test.err {
@@ -698,7 +698,7 @@ func TestImageExclusions(t *testing.T) {
 			archiveLocation := imagetest.PrepareFixtureImage(t, "docker-archive", test.input)
 			sourceInput, err := ParseInput(archiveLocation, "")
 			require.NoError(t, err)
-			src, fn, err := New(*sourceInput, registryOpts, test.exclusions)
+			src, fn, err := New(*sourceInput, registryOpts, test.exclusions, nil, nil)
 			defer fn()
 
 			if err != nil {

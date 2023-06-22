@@ -23,6 +23,8 @@ type PackagesOptions struct {
 	Catalogers         []string
 	SourceName         string
 	SourceVersion      string
+	Name               string
+	Include            []string
 }
 
 var _ Interface = (*PackagesOptions)(nil)
@@ -58,6 +60,9 @@ func (o *PackagesOptions) AddFlags(cmd *cobra.Command, v *viper.Viper) error {
 
 	cmd.Flags().StringVarP(&o.SourceVersion, "source-version", "", "",
 		"set the name of the target being analyzed")
+
+	cmd.Flags().StringArrayVarP(&o.Include, "include", "", nil,
+		"include extra paths to be scanned using a glob expression")
 
 	return bindPackageConfigOptions(cmd.Flags(), v)
 }
@@ -103,6 +108,10 @@ func bindPackageConfigOptions(flags *pflag.FlagSet, v *viper.Viper) error {
 	}
 
 	if err := v.BindPFlag("platform", flags.Lookup("platform")); err != nil {
+		return err
+	}
+
+	if err := v.BindPFlag("include", flags.Lookup("include")); err != nil {
 		return err
 	}
 

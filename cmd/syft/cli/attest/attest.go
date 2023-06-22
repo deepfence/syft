@@ -71,7 +71,7 @@ func Run(_ context.Context, app *config.Application, args []string) error {
 }
 
 func buildSBOM(app *config.Application, si source.Input, writer sbom.Writer, errs chan error) ([]byte, error) {
-	src, cleanup, err := source.New(si, app.Registry.ToOptions(), app.Exclusions)
+	src, cleanup, err := source.New(si, app.Registry.ToOptions(), app.Exclusions, app.Inclusions, app.Catalogers)
 	if cleanup != nil {
 		defer cleanup()
 	}
