@@ -60,6 +60,7 @@ var (
 		"java-pom-cataloger":               {"**/pom.xml"},
 		"javascript-package-cataloger":     {"**/package.json"},
 		"javascript-lock-cataloger":        {"**/package-lock.json", "**/yarn.lock", "**/pnpm-lock.yaml"},
+		"nix-store-cataloger":              {"**/nix/store/*"},
 		"php-composer-installed-cataloger": {"**/installed.json"},
 		"php-composer-lock-cataloger":      {"**/composer.lock"},
 		"portage-cataloger":                {"**/var/db/pkg/*/*/CONTENTS"},
