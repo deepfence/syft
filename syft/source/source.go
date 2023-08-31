@@ -30,7 +30,7 @@ var (
 	osIdPaths = []string{
 		"**/etc/os-release", "**/usr/lib/os-release", "**/etc/lsb-release",
 		"**/etc/centos-release", "**/etc/redhat-release", "**/etc/system-release-cpe",
-		"**/bin/busybox",
+		"**/bin/busybox", "**/usr/share/doc/**/copyright",
 	}
 	binarySearchPaths = []string{
 		"/usr/lib/jvm/**", "/usr/share/java/**",
