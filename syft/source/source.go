@@ -33,9 +33,9 @@ var (
 		"**/bin/busybox", "**/usr/share/doc/**/copyright",
 	}
 	binarySearchPaths = []string{
-		"/usr/lib/jvm/**", "/usr/share/java/**",
-		"/usr/local/sbin/*", "/usr/local/bin/*", "/usr/sbin/*", "/usr/bin/*", "/sbin/*", "/bin/*",
-		"/usr/lib64/*", "/usr/lib/*", "/usr/share/*", "/usr/local/lib64/*", "/usr/local/lib/*",
+		"**/usr/lib/jvm/**", "**/usr/share/java/**",
+		"**/usr/local/sbin/*", "**/usr/local/bin/*", "**/usr/sbin/*", "**/usr/bin/*", "**/sbin/*", "**/bin/*",
+		"**/usr/lib64/*", "**/usr/lib/*", "**/usr/share/*", "**/usr/local/lib64/*", "**/usr/local/lib/*",
 	}
 	catalogerGlobPatterns = map[string][]string{
 		"alpmdb-cataloger":        {"**/var/lib/pacman/local/**/desc"},
