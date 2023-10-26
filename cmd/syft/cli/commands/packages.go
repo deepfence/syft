@@ -155,6 +155,7 @@ func runPackages(id clio.Identification, opts *packagesOptions, userInput string
 			},
 			DigestAlgorithms: hashers,
 			BasePath:         opts.BasePath,
+			GlobFilter:       getfilter(opts.Catalogers),
 		},
 	)
 

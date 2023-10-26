@@ -25,13 +25,15 @@ type StereoscopeImageConfig struct {
 	RegistryOptions *image.RegistryOptions
 	Exclude         ExcludeConfig
 	Alias           Alias
+	GlobFilter      image.PathFilter
 }
 
 type StereoscopeImageSource struct {
-	id       artifact.ID
-	config   StereoscopeImageConfig
-	image    *image.Image
-	metadata StereoscopeImageSourceMetadata
+	id         artifact.ID
+	config     StereoscopeImageConfig
+	image      *image.Image
+	metadata   StereoscopeImageSourceMetadata
+	globFilter image.PathFilter
 }
 
 func NewFromStereoscopeImageObject(img *image.Image, reference string, alias *Alias) (*StereoscopeImageSource, error) {
@@ -65,7 +67,7 @@ func NewFromStereoscopeImage(cfg StereoscopeImageConfig) (*StereoscopeImageSourc
 		opts = append(opts, stereoscope.WithPlatform(cfg.Platform.String()))
 	}
 
-	img, err := stereoscope.GetImageFromSource(ctx, cfg.Reference, cfg.From, opts...)
+	img, err := stereoscope.GetImageFromSource(ctx, cfg.Reference, cfg.From, cfg.GlobFilter, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load image: %w", err)
 	}
@@ -73,10 +75,11 @@ func NewFromStereoscopeImage(cfg StereoscopeImageConfig) (*StereoscopeImageSourc
 	metadata := imageMetadataFromStereoscopeImage(img, cfg.Reference)
 
 	return &StereoscopeImageSource{
-		id:       deriveIDFromStereoscopeImage(cfg.Alias, metadata),
-		config:   cfg,
-		image:    img,
-		metadata: metadata,
+		id:         deriveIDFromStereoscopeImage(cfg.Alias, metadata),
+		config:     cfg,
+		image:      img,
+		metadata:   metadata,
+		globFilter: cfg.GlobFilter,
 	}, nil
 }
 
@@ -137,9 +140,9 @@ func (s StereoscopeImageSource) FileResolver(scope Scope) (file.Resolver, error)
 
 	switch scope {
 	case SquashedScope:
-		res, err = fileresolver.NewFromContainerImageSquash(s.image)
+		res, err = fileresolver.NewFromContainerImageSquash(s.image, s.globFilter)
 	case AllLayersScope:
-		res, err = fileresolver.NewFromContainerImageAllLayers(s.image)
+		res, err = fileresolver.NewFromContainerImageAllLayers(s.image, s.globFilter)
 	default:
 		return nil, fmt.Errorf("bad image scope provided: %+v", scope)
 	}

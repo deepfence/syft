@@ -230,6 +230,7 @@ func buildSBOM(id clio.Identification, opts *options.Catalog, userInput string) 
 			},
 			DigestAlgorithms: hashers,
 			BasePath:         opts.BasePath,
+			GlobFilter:       getfilter(opts.Catalogers),
 		},
 	)
 

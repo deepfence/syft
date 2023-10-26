@@ -10,6 +10,7 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/opencontainers/go-digest"
 
+	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/artifact"
 	"github.com/anchore/syft/syft/file"
@@ -19,10 +20,11 @@ import (
 var _ Source = (*DirectorySource)(nil)
 
 type DirectoryConfig struct {
-	Path    string
-	Base    string
-	Exclude ExcludeConfig
-	Alias   Alias
+	Path       string
+	Base       string
+	Exclude    ExcludeConfig
+	Alias      Alias
+	GlobFilter image.PathFilter
 }
 
 type DirectorySourceMetadata struct {
@@ -31,10 +33,11 @@ type DirectorySourceMetadata struct {
 }
 
 type DirectorySource struct {
-	id       artifact.ID
-	config   DirectoryConfig
-	resolver *fileresolver.Directory
-	mutex    *sync.Mutex
+	id         artifact.ID
+	config     DirectoryConfig
+	resolver   *fileresolver.Directory
+	mutex      *sync.Mutex
+	globFilter image.PathFilter
 }
 
 func NewFromDirectoryPath(path string) (*DirectorySource, error) {
@@ -55,9 +58,10 @@ func NewFromDirectory(cfg DirectoryConfig) (*DirectorySource, error) {
 	}
 
 	return &DirectorySource{
-		id:     deriveIDFromDirectory(cfg),
-		config: cfg,
-		mutex:  &sync.Mutex{},
+		id:         deriveIDFromDirectory(cfg),
+		config:     cfg,
+		mutex:      &sync.Mutex{},
+		globFilter: cfg.GlobFilter,
 	}, nil
 }
 
@@ -145,7 +149,7 @@ func (s *DirectorySource) FileResolver(_ Scope) (file.Resolver, error) {
 			return nil, err
 		}
 
-		res, err := fileresolver.NewFromDirectory(s.config.Path, s.config.Base, exclusionFunctions...)
+		res, err := fileresolver.NewFromDirectory(s.config.Path, s.config.Base, s.globFilter, exclusionFunctions...)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create directory resolver: %w", err)
 		}

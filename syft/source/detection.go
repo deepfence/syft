@@ -88,6 +88,7 @@ type DetectionSourceConfig struct {
 	Exclude          ExcludeConfig
 	DigestAlgorithms []crypto.Hash
 	BasePath         string
+	GlobFilter       image.PathFilter
 }
 
 func DefaultDetectionSourceConfig() DetectionSourceConfig {
@@ -115,6 +116,7 @@ func (d Detection) NewSource(cfg DetectionSourceConfig) (Source, error) {
 				Exclude:          cfg.Exclude,
 				DigestAlgorithms: cfg.DigestAlgorithms,
 				Alias:            cfg.Alias,
+				GlobFilter:       cfg.GlobFilter,
 			},
 		)
 	case directoryType:
@@ -124,10 +126,11 @@ func (d Detection) NewSource(cfg DetectionSourceConfig) (Source, error) {
 		}
 		src, err = NewFromDirectory(
 			DirectoryConfig{
-				Path:    d.location,
-				Base:    base,
-				Exclude: cfg.Exclude,
-				Alias:   cfg.Alias,
+				Path:       d.location,
+				Base:       base,
+				Exclude:    cfg.Exclude,
+				Alias:      cfg.Alias,
+				GlobFilter: cfg.GlobFilter,
 			},
 		)
 	case containerImageType:
@@ -139,6 +142,7 @@ func (d Detection) NewSource(cfg DetectionSourceConfig) (Source, error) {
 				RegistryOptions: cfg.RegistryOptions,
 				Exclude:         cfg.Exclude,
 				Alias:           cfg.Alias,
+				GlobFilter:      cfg.GlobFilter,
 			},
 		)
 	default:

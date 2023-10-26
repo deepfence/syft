@@ -15,12 +15,13 @@ var _ file.Resolver = (*ContainerImageAllLayers)(nil)
 
 // ContainerImageAllLayers implements path and content access for the AllLayers source option for container image data sources.
 type ContainerImageAllLayers struct {
-	img    *image.Image
-	layers []int
+	img        *image.Image
+	layers     []int
+	globFilter image.PathFilter
 }
 
 // NewFromContainerImageAllLayers returns a new resolver from the perspective of all image layers for the given image.
-func NewFromContainerImageAllLayers(img *image.Image) (*ContainerImageAllLayers, error) {
+func NewFromContainerImageAllLayers(img *image.Image, globFilter image.PathFilter) (*ContainerImageAllLayers, error) {
 	if len(img.Layers) == 0 {
 		return nil, fmt.Errorf("the image does not contain any layers")
 	}
@@ -30,8 +31,9 @@ func NewFromContainerImageAllLayers(img *image.Image) (*ContainerImageAllLayers,
 		layers = append(layers, idx)
 	}
 	return &ContainerImageAllLayers{
-		img:    img,
-		layers: layers,
+		img:        img,
+		layers:     layers,
+		globFilter: globFilter,
 	}, nil
 }
 
@@ -241,7 +243,9 @@ func (r *ContainerImageAllLayers) AllLocations() <-chan file.Location {
 		for _, layerIdx := range r.layers {
 			tree := r.img.Layers[layerIdx].Tree
 			for _, ref := range tree.AllFiles(stereoscopeFile.AllTypes()...) {
-				results <- file.NewLocationFromImage(string(ref.RealPath), ref, r.img)
+				if r.globFilter(string(ref.RealPath)) {
+					results <- file.NewLocationFromImage(string(ref.RealPath), ref, r.img)
+				}
 			}
 		}
 	}()

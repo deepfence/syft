@@ -109,6 +109,7 @@ func runPowerUser(id clio.Identification, opts *powerUserOptions, userInput stri
 			},
 			DigestAlgorithms: nil,
 			BasePath:         opts.BasePath,
+			GlobFilter:       getfilter(opts.Catalogers),
 		},
 	)
 

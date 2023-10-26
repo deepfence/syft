@@ -14,6 +14,7 @@ import (
 
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
+	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/internal"
 	"github.com/anchore/syft/internal/bus"
 	"github.com/anchore/syft/internal/log"
@@ -30,9 +31,11 @@ type directoryIndexer struct {
 	errPaths          map[string]error
 	tree              filetree.ReadWriter
 	index             filetree.Index
+	// add catalogers glob patterns filter
+	globFilter image.PathFilter
 }
 
-func newDirectoryIndexer(path, base string, visitors ...PathIndexVisitor) *directoryIndexer {
+func newDirectoryIndexer(path, base string, globFilter image.PathFilter, visitors ...PathIndexVisitor) *directoryIndexer {
 	i := &directoryIndexer{
 		path:              path,
 		base:              base,
@@ -40,6 +43,7 @@ func newDirectoryIndexer(path, base string, visitors ...PathIndexVisitor) *direc
 		index:             filetree.NewIndex(),
 		pathIndexVisitors: append([]PathIndexVisitor{requireFileInfo, disallowByFileType, disallowUnixSystemRuntimePath}, visitors...),
 		errPaths:          make(map[string]error),
+		globFilter:        globFilter,
 	}
 
 	// these additional stateful visitors should be the first thing considered when walking / indexing
@@ -139,6 +143,10 @@ func (r *directoryIndexer) indexTree(root string, stager *progress.Stage) ([]str
 	err = filepath.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
 			stager.Current = path
+
+			if !r.globFilter(path) {
+				return nil
+			}
 
 			newRoot, err := r.indexPath(path, info, err)
 
