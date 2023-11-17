@@ -14,10 +14,13 @@ var (
 		"**/etc/centos-release", "**/etc/redhat-release", "**/etc/system-release-cpe",
 		"**/bin/busybox", "**/usr/share/doc/**/copyright",
 	}
+	//BinarySearchPaths = []string{
+	//	"**/usr/lib/jvm/**", "**/usr/share/java/**",
+	//	"**/usr/local/sbin/*", "**/usr/local/bin/*", "**/usr/sbin/*", "**/usr/bin/*", "**/sbin/*", "**/bin/*",
+	//	"**/usr/lib64/*", "**/usr/lib/*", "**/usr/share/*", "**/usr/local/lib64/*", "**/usr/local/lib/*",
+	//}
 	BinarySearchPaths = []string{
-		"**/usr/lib/jvm/**", "**/usr/share/java/**",
-		"**/usr/local/sbin/*", "**/usr/local/bin/*", "**/usr/sbin/*", "**/usr/bin/*", "**/sbin/*", "**/bin/*",
-		"**/usr/lib64/*", "**/usr/lib/*", "**/usr/share/*", "**/usr/local/lib64/*", "**/usr/local/lib/*",
+		"**/**",
 	}
 	CatalogerGlobPatterns = map[string][]string{
 		"alpmdb-cataloger":        {"**/var/lib/pacman/local/**/desc"},
