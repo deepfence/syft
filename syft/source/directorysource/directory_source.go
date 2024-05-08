@@ -10,6 +10,7 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/opencontainers/go-digest"
 
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/artifact"
 	"github.com/anchore/syft/syft/file"
@@ -21,10 +22,11 @@ import (
 var _ source.Source = (*directorySource)(nil)
 
 type Config struct {
-	Path    string
-	Base    string
-	Exclude source.ExcludeConfig
-	Alias   source.Alias
+	Path           string
+	Base           string
+	Exclude        source.ExcludeConfig
+	Alias          source.Alias
+	PathFilterFunc pathfilter.PathFilterFunc
 }
 
 type directorySource struct {
@@ -142,7 +144,7 @@ func (s *directorySource) FileResolver(_ source.Scope) (file.Resolver, error) {
 			return nil, err
 		}
 
-		res, err := fileresolver.NewFromDirectory(s.config.Path, s.config.Base, exclusionFunctions...)
+		res, err := fileresolver.NewFromDirectory(s.config.Path, s.config.Base, s.config.PathFilterFunc, exclusionFunctions...)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create directory resolver: %w", err)
 		}

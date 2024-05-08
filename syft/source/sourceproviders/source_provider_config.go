@@ -4,6 +4,7 @@ import (
 	"crypto"
 
 	"github.com/anchore/stereoscope/pkg/image"
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/syft/source"
 )
 
@@ -15,6 +16,12 @@ type Config struct {
 	Exclude          source.ExcludeConfig
 	DigestAlgorithms []crypto.Hash
 	BasePath         string
+	PathFilterFunc   func(path string) bool // deepfence path filter
+}
+
+func (c *Config) WithPathFilterFunc(fn pathfilter.PathFilterFunc) *Config {
+	c.PathFilterFunc = fn
+	return c
 }
 
 func (c *Config) WithAlias(alias source.Alias) *Config {

@@ -2,6 +2,8 @@ module github.com/anchore/syft
 
 go 1.21.0
 
+replace github.com/anchore/stereoscope v0.0.3-0.20240423181235-8b297badafd5 => github.com/deepfence/stereoscope v0.0.0-20240508162751-5db039e060ca
+
 require (
 	github.com/CycloneDX/cyclonedx-go v0.8.0
 	github.com/Masterminds/semver v1.5.0

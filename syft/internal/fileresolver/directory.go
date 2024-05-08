@@ -9,6 +9,7 @@ import (
 
 	stereoscopeFile "github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/internal/windows"
@@ -20,16 +21,17 @@ var _ file.Resolver = (*Directory)(nil)
 
 // Directory implements path and content access for the directory data source.
 type Directory struct {
-	path          string
-	chroot        ChrootContext
-	tree          filetree.Reader
-	index         filetree.IndexReader
-	searchContext filetree.Searcher
-	indexer       *directoryIndexer
+	path           string
+	chroot         ChrootContext
+	tree           filetree.Reader
+	index          filetree.IndexReader
+	searchContext  filetree.Searcher
+	indexer        *directoryIndexer
+	pathFilterFunc pathfilter.PathFilterFunc
 }
 
-func NewFromDirectory(root string, base string, pathFilters ...PathIndexVisitor) (*Directory, error) {
-	r, err := newFromDirectoryWithoutIndex(root, base, pathFilters...)
+func NewFromDirectory(root string, base string, pathFilterFunc pathfilter.PathFilterFunc, pathFilters ...PathIndexVisitor) (*Directory, error) {
+	r, err := newFromDirectoryWithoutIndex(root, base, pathFilterFunc, pathFilters...)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +39,7 @@ func NewFromDirectory(root string, base string, pathFilters ...PathIndexVisitor)
 	return r, r.buildIndex()
 }
 
-func newFromDirectoryWithoutIndex(root string, base string, pathFilters ...PathIndexVisitor) (*Directory, error) {
+func newFromDirectoryWithoutIndex(root string, base string, pathFilterFunc pathfilter.PathFilterFunc, pathFilters ...PathIndexVisitor) (*Directory, error) {
 	chroot, err := NewChrootContextFromCWD(root, base)
 	if err != nil {
 		return nil, fmt.Errorf("unable to interpret chroot context: %w", err)
@@ -47,11 +49,12 @@ func newFromDirectoryWithoutIndex(root string, base string, pathFilters ...PathI
 	cleanBase := chroot.Base()
 
 	return &Directory{
-		path:    cleanRoot,
-		chroot:  *chroot,
-		tree:    filetree.New(),
-		index:   filetree.NewIndex(),
-		indexer: newDirectoryIndexer(cleanRoot, cleanBase, pathFilters...),
+		path:           cleanRoot,
+		chroot:         *chroot,
+		tree:           filetree.New(),
+		index:          filetree.NewIndex(),
+		indexer:        newDirectoryIndexer(cleanRoot, cleanBase, pathFilterFunc, pathFilters...),
+		pathFilterFunc: pathFilterFunc,
 	}, nil
 }
 

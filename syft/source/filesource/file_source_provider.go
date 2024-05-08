@@ -8,15 +8,17 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/afero"
 
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/syft/source"
 )
 
-func NewSourceProvider(path string, exclude source.ExcludeConfig, digestAlgorithms []crypto.Hash, alias source.Alias) source.Provider {
+func NewSourceProvider(path string, exclude source.ExcludeConfig, digestAlgorithms []crypto.Hash, alias source.Alias, pathFilterFunc pathfilter.PathFilterFunc) source.Provider {
 	return &fileSourceProvider{
 		path:             path,
 		exclude:          exclude,
 		digestAlgorithms: digestAlgorithms,
 		alias:            alias,
+		pathFilterFunc:   pathFilterFunc,
 	}
 }
 
@@ -25,6 +27,7 @@ type fileSourceProvider struct {
 	exclude          source.ExcludeConfig
 	digestAlgorithms []crypto.Hash
 	alias            source.Alias
+	pathFilterFunc   pathfilter.PathFilterFunc
 }
 
 func (p fileSourceProvider) Name() string {
@@ -53,6 +56,7 @@ func (p fileSourceProvider) Provide(_ context.Context) (source.Source, error) {
 			Exclude:          p.exclude,
 			DigestAlgorithms: p.digestAlgorithms,
 			Alias:            p.alias,
+			PathFilterFunc:   p.pathFilterFunc,
 		},
 	)
 }

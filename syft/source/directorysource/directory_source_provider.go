@@ -7,23 +7,26 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/afero"
 
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/syft/source"
 )
 
-func NewSourceProvider(path string, exclude source.ExcludeConfig, alias source.Alias, basePath string) source.Provider {
+func NewSourceProvider(path string, exclude source.ExcludeConfig, alias source.Alias, basePath string, pathFilterFunc pathfilter.PathFilterFunc) source.Provider {
 	return &directorySourceProvider{
-		path:     path,
-		basePath: basePath,
-		exclude:  exclude,
-		alias:    alias,
+		path:           path,
+		basePath:       basePath,
+		exclude:        exclude,
+		alias:          alias,
+		pathFilterFunc: pathFilterFunc,
 	}
 }
 
 type directorySourceProvider struct {
-	path     string
-	basePath string
-	exclude  source.ExcludeConfig
-	alias    source.Alias
+	path           string
+	basePath       string
+	exclude        source.ExcludeConfig
+	alias          source.Alias
+	pathFilterFunc pathfilter.PathFilterFunc
 }
 
 func (l directorySourceProvider) Name() string {
@@ -48,10 +51,11 @@ func (l directorySourceProvider) Provide(_ context.Context) (source.Source, erro
 
 	return New(
 		Config{
-			Path:    location,
-			Base:    basePath(l.basePath, location),
-			Exclude: l.exclude,
-			Alias:   l.alias,
+			Path:           location,
+			Base:           basePath(l.basePath, location),
+			Exclude:        l.exclude,
+			Alias:          l.alias,
+			PathFilterFunc: l.pathFilterFunc,
 		},
 	)
 }

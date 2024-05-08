@@ -26,8 +26,8 @@ func All(userInput string, cfg *Config) []collections.TaggedValue[source.Provide
 	return collections.TaggedValueSet[source.Provider]{}.
 		// --from file, dir, oci-archive, etc.
 		Join(stereoscopeProviders.Select(FileTag, DirTag)...).
-		Join(tagProvider(filesource.NewSourceProvider(userInput, cfg.Exclude, cfg.DigestAlgorithms, cfg.Alias), FileTag)).
-		Join(tagProvider(directorysource.NewSourceProvider(userInput, cfg.Exclude, cfg.Alias, cfg.BasePath), DirTag)).
+		Join(tagProvider(filesource.NewSourceProvider(userInput, cfg.Exclude, cfg.DigestAlgorithms, cfg.Alias, cfg.PathFilterFunc), FileTag)).
+		Join(tagProvider(directorysource.NewSourceProvider(userInput, cfg.Exclude, cfg.Alias, cfg.BasePath, cfg.PathFilterFunc), DirTag)).
 
 		// --from docker, registry, etc.
 		Join(stereoscopeProviders.Select(PullTag)...)
@@ -40,9 +40,10 @@ func stereoscopeSourceProviders(userInput string, cfg *Config) collections.Tagge
 	}
 	stereoscopeProviders := stereoscopesource.Providers(stereoscopesource.ProviderConfig{
 		StereoscopeImageProviderConfig: stereoscope.ImageProviderConfig{
-			UserInput: userInput,
-			Platform:  cfg.Platform,
-			Registry:  registry,
+			UserInput:      userInput,
+			Platform:       cfg.Platform,
+			Registry:       registry,
+			PathFilterFunc: cfg.PathFilterFunc,
 		},
 		Alias:   cfg.Alias,
 		Exclude: cfg.Exclude,

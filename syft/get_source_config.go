@@ -6,6 +6,7 @@ import (
 
 	"github.com/anchore/go-collections"
 	"github.com/anchore/stereoscope/pkg/image"
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/syft/source"
 	"github.com/anchore/syft/syft/source/sourceproviders"
 )
@@ -19,6 +20,11 @@ type GetSourceConfig struct {
 
 	// DefaultImagePullSource will cause a particular image pull source to be used as the first pull source, followed by other pull sources
 	DefaultImagePullSource string
+}
+
+func (c *GetSourceConfig) WithPathFilterFunc(fn pathfilter.PathFilterFunc) *GetSourceConfig {
+	c.SourceProviderConfig = c.SourceProviderConfig.WithPathFilterFunc(fn)
+	return c
 }
 
 func (c *GetSourceConfig) WithAlias(alias source.Alias) *GetSourceConfig {

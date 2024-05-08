@@ -15,6 +15,7 @@ import (
 
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	"github.com/anchore/syft/internal"
 	"github.com/anchore/syft/internal/bus"
 	"github.com/anchore/syft/internal/log"
@@ -31,9 +32,10 @@ type directoryIndexer struct {
 	errPaths          map[string]error
 	tree              filetree.ReadWriter
 	index             filetree.Index
+	pathFilterFunc    pathfilter.PathFilterFunc
 }
 
-func newDirectoryIndexer(path, base string, visitors ...PathIndexVisitor) *directoryIndexer {
+func newDirectoryIndexer(path, base string, pathFilterFunc pathfilter.PathFilterFunc, visitors ...PathIndexVisitor) *directoryIndexer {
 	i := &directoryIndexer{
 		path:  path,
 		base:  base,
@@ -46,7 +48,8 @@ func newDirectoryIndexer(path, base string, visitors ...PathIndexVisitor) *direc
 				newUnixSystemMountFinder().disallowUnixSystemRuntimePath},
 			visitors...,
 		),
-		errPaths: make(map[string]error),
+		errPaths:       make(map[string]error),
+		pathFilterFunc: pathFilterFunc,
 	}
 
 	// these additional stateful visitors should be the first thing considered when walking / indexing
@@ -254,6 +257,13 @@ func allContainedPaths(p string) []string {
 }
 
 func (r *directoryIndexer) indexPath(givenPath string, info os.FileInfo, err error) (string, error) {
+
+	if r.pathFilterFunc != nil {
+		if !r.pathFilterFunc(givenPath) {
+			return "", nil
+		}
+	}
+
 	// ignore any path which a filter function returns true
 	for _, filterFn := range r.pathIndexVisitors {
 		if filterFn == nil {

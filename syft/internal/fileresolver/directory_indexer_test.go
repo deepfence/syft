@@ -17,6 +17,7 @@ import (
 	"github.com/wagoodman/go-progress"
 
 	"github.com/anchore/stereoscope/pkg/file"
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 )
 
 type indexerMock struct {
@@ -144,7 +145,7 @@ func TestDirectoryIndexer_IncludeRootPathInIndex(t *testing.T) {
 		return nil
 	}
 
-	indexer := newDirectoryIndexer("/", "", filterFn)
+	indexer := newDirectoryIndexer("/", "", pathfilter.DefaultPathFilterFunc, filterFn)
 	tree, index, err := indexer.build()
 	require.NoError(t, err)
 
@@ -162,7 +163,7 @@ func TestDirectoryIndexer_indexPath_skipsNilFileInfo(t *testing.T) {
 	tempFile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 
-	indexer := newDirectoryIndexer(tempFile.Name(), "")
+	indexer := newDirectoryIndexer(tempFile.Name(), "", pathfilter.DefaultPathFilterFunc)
 
 	t.Run("filtering path with nil os.FileInfo", func(t *testing.T) {
 		assert.NotPanics(t, func() {
@@ -175,7 +176,7 @@ func TestDirectoryIndexer_indexPath_skipsNilFileInfo(t *testing.T) {
 
 func TestDirectoryIndexer_index(t *testing.T) {
 	// note: this test is testing the effects from NewFromDirectory, indexTree, and addPathToIndex
-	indexer := newDirectoryIndexer("test-fixtures/system_paths/target", "")
+	indexer := newDirectoryIndexer("test-fixtures/system_paths/target", "", pathfilter.DefaultPathFilterFunc)
 	tree, index, err := indexer.build()
 	require.NoError(t, err)
 
@@ -231,7 +232,7 @@ func TestDirectoryIndexer_index_survive_badSymlink(t *testing.T) {
 	// │   │   └── fd -> ../somewhere/self/fd
 	// │   └── somewhere
 	// ...
-	indexer := newDirectoryIndexer("test-fixtures/bad-symlinks/root/place/fd", "test-fixtures/bad-symlinks/root/place/fd")
+	indexer := newDirectoryIndexer("test-fixtures/bad-symlinks/root/place/fd", "test-fixtures/bad-symlinks/root/place/fd", pathfilter.DefaultPathFilterFunc)
 	_, _, err := indexer.build()
 	require.NoError(t, err)
 }
@@ -249,7 +250,7 @@ func TestDirectoryIndexer_SkipsAlreadyVisitedLinkDestinations(t *testing.T) {
 		}
 		return nil
 	}
-	resolver := newDirectoryIndexer("./test-fixtures/symlinks-prune-indexing", "")
+	resolver := newDirectoryIndexer("./test-fixtures/symlinks-prune-indexing", "", pathfilter.DefaultPathFilterFunc)
 	// we want to cut ahead of any possible filters to see what paths are considered for indexing (closest to walking)
 	resolver.pathIndexVisitors = append([]PathIndexVisitor{pathObserver}, resolver.pathIndexVisitors...)
 
@@ -287,7 +288,7 @@ func TestDirectoryIndexer_SkipsAlreadyVisitedLinkDestinations(t *testing.T) {
 }
 
 func TestDirectoryIndexer_IndexesAllTypes(t *testing.T) {
-	indexer := newDirectoryIndexer("./test-fixtures/symlinks-prune-indexing", "")
+	indexer := newDirectoryIndexer("./test-fixtures/symlinks-prune-indexing", "", pathfilter.DefaultPathFilterFunc)
 
 	tree, index, err := indexer.build()
 	require.NoError(t, err)

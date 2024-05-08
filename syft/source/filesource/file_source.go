@@ -13,6 +13,7 @@ import (
 	"github.com/opencontainers/go-digest"
 
 	stereoFile "github.com/anchore/stereoscope/pkg/file"
+	"github.com/anchore/stereoscope/pkg/pathfilter"
 	intFile "github.com/anchore/syft/internal/file"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/artifact"
@@ -30,6 +31,7 @@ type Config struct {
 	Exclude          source.ExcludeConfig
 	DigestAlgorithms []crypto.Hash
 	Alias            source.Alias
+	PathFilterFunc   pathfilter.PathFilterFunc
 }
 
 type fileSource struct {
@@ -168,7 +170,7 @@ func (s fileSource) FileResolver(_ source.Scope) (file.Resolver, error) {
 	var res *fileresolver.Directory
 	if isArchiveAnalysis {
 		// this is an analysis of an archive file... we should scan the directory where the archive contents
-		res, err = fileresolver.NewFromDirectory(s.analysisPath, "", exclusionFunctions...)
+		res, err = fileresolver.NewFromDirectory(s.analysisPath, "", s.config.PathFilterFunc, exclusionFunctions...)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create directory resolver: %w", err)
 		}
@@ -199,7 +201,7 @@ func (s fileSource) FileResolver(_ source.Scope) (file.Resolver, error) {
 			},
 		}, exclusionFunctions...)
 
-		res, err = fileresolver.NewFromDirectory(absParentDir, absParentDir, exclusionFunctions...)
+		res, err = fileresolver.NewFromDirectory(absParentDir, absParentDir, s.config.PathFilterFunc, exclusionFunctions...)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create directory resolver: %w", err)
 		}
