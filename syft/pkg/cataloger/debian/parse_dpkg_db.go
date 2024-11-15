@@ -69,6 +69,7 @@ func parseDpkgStatus(reader io.Reader) ([]pkg.DpkgDBEntry, error) {
 // pkg.DpkgMetadata struct has different types for some fields (e.g. Provides, Depends, and PreDepends is []string, not a string).
 type dpkgExtractedMetadata struct {
 	Package       string `mapstructure:"Package"`
+	Status        string `mapstructure:"Status"`
 	Source        string `mapstructure:"Source"`
 	Version       string `mapstructure:"Version"`
 	SourceVersion string `mapstructure:"SourceVersion"`
@@ -99,6 +100,11 @@ func parseDpkgStatusEntry(reader *bufio.Reader) (*pkg.DpkgDBEntry, error) {
 	err = mapstructure.Decode(dpkgFields, &raw)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.Contains(raw.Status, "deinstall") {
+		log.Debugf("skipping package %s with status %s", raw.Package, raw.Status)
+		return nil, nil
 	}
 
 	sourceName, sourceVersion := extractSourceVersion(raw.Source)
